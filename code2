@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:email="http://www.mulesoft.org/schema/mule/email" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd">
+	<email:smtp-config name="Email_SMTP" doc:name="Email SMTP" doc:id="58071b47-b9b3-47a9-a776-e8eb497e63dd" >
+		<email:smtp-connection host="dfs" connectionTimeout="150" readTimeout="150" writeTimeout="150">
+			<reconnection >
+				<reconnect frequency="1000" />
+			</reconnection>
+			<email:properties >
+				<email:property key="mail.smtp.starttls.enable" value="true" />
+			</email:properties>
+		</email:smtp-connection>
+	</email:smtp-config>
+	<configuration-properties doc:name="Configuration properties" doc:id="e8febb0a-af8f-4f0d-907e-5d2c1c65edfd" file="properties/common.properties" />
+	<configuration-properties doc:name="Configuration properties" doc:id="4c95158e-5e79-4656-a605-f1e5beaa76c5" file="properties/${env}.properties" />
+	<global-property doc:name="Global Property" doc:id="bb6ae8b2-7b52-4c36-8324-040dd594c5f7" name="env" value="dev" />
+</mule>
