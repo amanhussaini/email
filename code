@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:email="http://www.mulesoft.org/schema/mule/email" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd 
+http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd">
+    <http:listener-config name="email_notifications_sapi-httpListenerConfig">
+        <http:listener-connection host="0.0.0.0" port="8081" />
+    </http:listener-config>
+    <apikit:config name="email_notifications_sapi-config" api="resource::77342d0a-8d73-4612-a8fc-d319611c9fb6:email_notifications_sapi:1.0.0:raml:zip:email_notifications_sapi.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+    <flow name="email_notifications_sapi-main">
+        <http:listener config-ref="email_notifications_sapi-httpListenerConfig" path="/api/email">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers><![CDATA[#[vars.outboundHeaders default {}]]]></http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body><![CDATA[#[payload]]]></http:body>
+                <http:headers><![CDATA[#[vars.outboundHeaders default {}]]]></http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:router config-ref="email_notifications_sapi-config" />
+		<error-handler />
+    </flow>
+    <flow name="get:\health:email_notifications_sapi-config">
+        <ee:transform doc:name="Health Check">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+    <flow name="post:\email:application\json:email_notifications_sapi-config">
+		<set-variable value='#[%dw 2.0&#10;output application/json&#10;---&#10;payload.Body default ""]' doc:name="Email_Body" doc:id="7c4234ad-0d5e-4eda-bff3-426e88e4295a" variableName="Email_Body"/>
+		<choice doc:name="Choice" doc:id="36353b3e-1c4f-4434-a0c9-802de317295b" >
+			<when expression="#[!(isEmpty(payload.Attachment))]">
+				<set-variable value='#[%dw 2.0&#10;output application/json&#10;var filename = payload.Attachment.File_Name default "Attachment.txt"&#10;---&#10;{&#10;	(filename) : payload.Attachment.Content default ""&#10;}]' doc:name="Attachments" doc:id="2cc43f47-2361-4656-ba61-790c6cc804b3" variableName="Attachments" />
+			</when>
+		</choice>
+		<email:send doc:name="Send Email" doc:id="2c1a7c9c-be84-4192-8161-2fc3a67dabed" config-ref="Email_SMTP" fromAddress="${email.from_address}" toAddresses="#[payload.Email_To default []]" subject="#[&quot;MuleSoft Alert | &quot; ++ (payload.Subject as String default &quot;&quot;) ++ &quot; | Application: &quot; ++ (payload.Application_Name as String default &quot;&quot;) ++ &quot; | env: &quot; ++ Mule::p('Mule.env') as String]" ccAddresses="#[payload.Email_Cc default []]" bccAddresses="#[payload.Email_Bcc default []]">
+			<email:body contentType="text/plain" encoding="UTF-8" >
+				<email:content ><![CDATA[#[vars.Email_Body default ""]]]></email:content>
+			</email:body>
+			<email:attachments ><![CDATA[#[vars.Attachments default {}]]]></email:attachments>
+		</email:send>
+		<ee:transform doc:name="API Response">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  status: "success",
+  desc: "Email sent successfully"
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+		<logger level="INFO" doc:name="Email Sent Successfully" doc:id="6bd6e240-9f98-40e0-8ad9-d02e1ca2f41e" message="Email Notification Completed"/>
+		<error-handler />
+    </flow>
+</mule>
